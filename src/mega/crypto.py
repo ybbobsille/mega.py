@@ -94,7 +94,7 @@ def a32_to_str(a):
 
 def str_to_a32(b):
     if isinstance(b, str):
-        b = makebyte(b)
+        b = b.encode("utf-8")
     if len(b) % 4:
         # pad to multiple of 4
         b += b'\0' * (4 - len(b) % 4)
