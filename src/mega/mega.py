@@ -643,7 +643,7 @@ class Mega:
             dest_path=dest_path,
             dest_filename=dest_filename,
             is_public=True,
-            progress_callback=progress_callback
+            #progress_callback=progress_callback
         )
 
     def _download_file(self,
@@ -652,8 +652,7 @@ class Mega:
                        dest_path=None,
                        dest_filename=None,
                        is_public=False,
-                       file=None,
-                       progress_callback=None):
+                       file=None):
         if file is None:
             if is_public:
                 file_key = base64_to_a32(file_key)
@@ -679,6 +678,9 @@ class Mega:
             iv = file['iv']
             meta_mac = file['meta_mac']
 
+        # Seems to happens sometime... When this occurs, files are
+        # inaccessible also in the official also in the official web app.
+        # Strangely, files can come back later.
         if 'g' not in file_data:
             raise RequestError('File not accessible anymore')
         file_url = file_data['g']
@@ -711,45 +713,35 @@ class Mega:
                                     mac_str.encode("utf8"))
             iv_str = a32_to_str([iv[0], iv[1], iv[0], iv[1]])
 
-            total_downloaded = 0
-
             for chunk_start, chunk_size in get_chunks(file_size):
                 chunk = input_file.read(chunk_size)
                 chunk = aes.decrypt(chunk)
                 temp_output_file.write(chunk)
 
                 encryptor = AES.new(k_str, AES.MODE_CBC, iv_str)
-                i = 0
                 for i in range(0, len(chunk) - 16, 16):
                     block = chunk[i:i + 16]
                     encryptor.encrypt(block)
 
                 # fix for files under 16 bytes failing
-                if len(chunk) < 16:
-                    i = 0
-                else:
+                if file_size > 16:
                     i += 16
+                else:
+                    i = 0
 
                 block = chunk[i:i + 16]
                 if len(block) % 16:
                     block += b'\0' * (16 - (len(block) % 16))
-
                 mac_str = mac_encryptor.encrypt(encryptor.encrypt(block))
-
-                total_downloaded += len(chunk)
-
-                if progress_callback:
-                    progress_callback(total_downloaded / file_size)
 
                 file_info = os.stat(temp_output_file.name)
                 logger.info('%s of %s downloaded', file_info.st_size,
                             file_size)
-
             file_mac = str_to_a32(mac_str)
+            # check mac integrity
             if (file_mac[0] ^ file_mac[1],
                     file_mac[2] ^ file_mac[3]) != meta_mac:
                 raise ValueError('Mismatched mac')
-
             output_path = Path(dest_path + file_name)
             shutil.move(temp_output_file.name, output_path)
             return output_path
