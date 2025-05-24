@@ -709,9 +709,8 @@ class Mega:
                                   initial_value=((iv[0] << 32) + iv[1]) << 64)
             aes = AES.new(k_str, AES.MODE_CTR, counter=counter)
 
-            mac_str = '\0' * 16
-            mac_encryptor = AES.new(k_str, AES.MODE_CBC,
-                                    mac_str.encode("utf8"))
+            mac_str = b'\0' * 16
+            mac_encryptor = AES.new(k_str, AES.MODE_CBC, mac_str)
             iv_str = a32_to_str([iv[0], iv[1], iv[0], iv[1]])
 
             with tqdm(total=file_size, unit='B', unit_scale=True, desc=file_name) as pbar:
@@ -743,6 +742,8 @@ class Mega:
                     logger.info('%s of %s downloaded', file_info.st_size,
                                 file_size)
             file_mac = str_to_a32(mac_str)
+            if len(file_mac) < 4:
+                raise ValueError("MAC is too short: possible encryption error")
             # check mac integrity
             if (file_mac[0] ^ file_mac[1],
                     file_mac[2] ^ file_mac[3]) != meta_mac:
