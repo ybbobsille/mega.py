@@ -718,29 +718,27 @@ class Mega:
                     chunk = input_file.read(chunk_size)
                     chunk = aes.decrypt(chunk)
                     temp_output_file.write(chunk)
-
+            
                     encryptor = AES.new(k_str, AES.MODE_CBC, iv_str)
-                    i = 0
                     for i in range(0, len(chunk) - 16, 16):
                         block = chunk[i:i + 16]
                         encryptor.encrypt(block)
-
+            
                     # fix for files under 16 bytes failing
                     if file_size > 16:
                         i += 16
                     else:
                         i = 0
-
+            
                     block = chunk[i:i + 16]
                     if len(block) % 16:
                         block += b'\0' * (16 - (len(block) % 16))
                     mac_str = mac_encryptor.encrypt(encryptor.encrypt(block))
-                    
+            
                     pbar.update(len(chunk))
-
+            
                     file_info = os.stat(temp_output_file.name)
-                    logger.info('%s of %s downloaded', file_info.st_size,
-                                file_size)
+                    logger.info('%s of %s downloaded', file_info.st_size, file_size)
             file_mac = str_to_a32(mac_str)
             if len(file_mac) < 4:
                 raise ValueError("MAC is too short: possible encryption error")
