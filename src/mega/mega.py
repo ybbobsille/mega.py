@@ -24,6 +24,8 @@ from .crypto import (a32_to_base64, encrypt_key, base64_url_encode,
                      decrypt_key, mpi_to_int, stringhash, prepare_key, make_id,
                      makebyte, modular_inverse)
 
+from tqdm import tqdm
+
 logger = logging.getLogger(__name__)
 
 
