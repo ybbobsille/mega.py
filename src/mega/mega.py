@@ -711,33 +711,33 @@ class Mega:
 
             # Initialize tqdm progress bar
             with tqdm(total=file_size, unit='B', unit_scale=True, desc=file_name) as pbar:
-            for chunk_start, chunk_size in get_chunks(file_size):
-                chunk = input_file.read(chunk_size)
-                chunk = aes.decrypt(chunk)
-                temp_output_file.write(chunk)
-
-                encryptor = AES.new(k_str, AES.MODE_CBC, iv_str)
-                for i in range(0, len(chunk) - 16, 16):
+                for chunk_start, chunk_size in get_chunks(file_size):
+                    chunk = input_file.read(chunk_size)
+                    chunk = aes.decrypt(chunk)
+                    temp_output_file.write(chunk)
+    
+                    encryptor = AES.new(k_str, AES.MODE_CBC, iv_str)
+                    for i in range(0, len(chunk) - 16, 16):
+                        block = chunk[i:i + 16]
+                        encryptor.encrypt(block)
+    
+                    # fix for files under 16 bytes failing
+                    if file_size > 16:
+                        i += 16
+                    else:
+                        i = 0
+    
                     block = chunk[i:i + 16]
-                    encryptor.encrypt(block)
-
-                # fix for files under 16 bytes failing
-                if file_size > 16:
-                    i += 16
-                else:
-                    i = 0
-
-                block = chunk[i:i + 16]
-                if len(block) % 16:
-                    block += b'\0' * (16 - (len(block) % 16))
-                mac_str = mac_encryptor.encrypt(encryptor.encrypt(block))
-
-                # Update progress bar by the size of this chunk
-                pbar.update(len(chunk))
-
-                file_info = os.stat(temp_output_file.name)
-                logger.info('%s of %s downloaded', file_info.st_size,
-                            file_size)
+                    if len(block) % 16:
+                        block += b'\0' * (16 - (len(block) % 16))
+                    mac_str = mac_encryptor.encrypt(encryptor.encrypt(block))
+    
+                    # Update progress bar by the size of this chunk
+                    pbar.update(len(chunk))
+    
+                    file_info = os.stat(temp_output_file.name)
+                    logger.info('%s of %s downloaded', file_info.st_size,
+                                file_size)
 
             file_mac = str_to_a32(mac_str)
             # check mac integrity
@@ -748,7 +748,7 @@ class Mega:
             output_path = Path(dest_path + file_name)
             shutil.move(temp_output_file.name, output_path)
             return output_path
-            
+
     def upload(self, filename, dest=None, dest_filename=None):
         # determine storage node
         if dest is None:
